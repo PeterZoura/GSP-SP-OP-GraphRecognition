@@ -1,4 +1,4 @@
-//usage: ./Tsin <input_graph> <output_file>
+//usage: ./dfs <input_graph> <output_file>
 
 /*
 terminology guide
