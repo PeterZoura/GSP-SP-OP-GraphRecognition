@@ -15,16 +15,28 @@ void create_edges(int num_v, int num_e, vector<pair<int, int>> & edges, s::ifstr
     for (int i =0; i<num_e ; i++){
         int x, y;
         istream >> x >> y;
-        edges.push_back(s::pair<int, int>(x, y));
+        edges.push_back(s::make_pair(x, y));
     }
 }
 
 
-vector<vector<int>> create_adjacency_list(int n, int m){
-    vector<vector<int>> adj;
-    for(int i=0 ; i<m ; i++){
-
+void create_adjacency_list(int const n, int const m, auto & edges, auto & adj){
+    for(int i = 0; i<n; i++){
+        adj.push_back(vector<int>{});
     }
+    
+    for(pair<int, int> e : edges){
+        int x = e.first;
+        int y = e.second;
+        adj[x].push_back(y);
+        adj[y].push_back(x);
+    }
+}
+
+vector<int> dfs(int const n, auto & adjacency_list){
+    vector<int> dfs{n, -1};
+    int rank = 0;
+    return dfs;
 }
 
 int main(int argc, char* argv[]){
@@ -32,8 +44,14 @@ int main(int argc, char* argv[]){
     int n, m;
     is >> n >> m;
     vector<pair<int, int>> edges;
-    create_edges(n, m, edges, is);
-    for (pair<int, int> e : edges){
-        s::cout << e.first << ' ' << e.second << '\n';
+    vector<vector<int>> adj;
+
+    create_edges(n, m, edges, is);    
+    create_adjacency_list(n, m, edges, adj);
+    for(vector<int> e : adj){
+        for( int i : e){
+            s::cout << i << ", ";
+        }
+        s::cout << '\n';
     }
 }
