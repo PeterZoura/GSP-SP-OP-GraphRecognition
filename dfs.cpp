@@ -50,10 +50,11 @@ for example:
 
 */
 
-
+#include <iostream>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/time.h>
+#include <chrono>
 
 int n, m;
 int* edges;
@@ -84,16 +85,21 @@ int main(int n_args, char** args)
    create_adjacency_list();
 
    struct timeval begin, end;
-   gettimeofday(&begin, 0);  
-
+   //gettimeofday(&begin, 0);  
+   auto time_start = std::chrono::steady_clock::now();
    initializeDFS();
+   auto time_end = std::chrono::steady_clock::now();
 
+   std::chrono::duration<double, std::nano> elapsed = std::chrono::duration_cast<std::chrono::nanoseconds>(time_end - time_start);
+	std::cout << elapsed.count()/1000 << "μs is the time\n";
 
+   /* //old method of timetelling
    gettimeofday(&end, 0);
 	long seconds = end.tv_sec - begin.tv_sec;
 	long microseconds = end.tv_usec - begin.tv_usec;
 	double elapsed = seconds + microseconds*1e-6;
 	printf("Total time= %f\n", elapsed);
+   */
 
    fp = fopen(args[2],"w");
 
@@ -101,7 +107,7 @@ int main(int n_args, char** args)
    {
          fprintf(fp,"node: %d , dfs: %d\n",i ,dfs[i]);
    }
-   fprintf(fp, "%lf\n", elapsed);
+   //fprintf(fp, "%lf\n", elapsed);
    fclose(fp);
    
    return 0;
