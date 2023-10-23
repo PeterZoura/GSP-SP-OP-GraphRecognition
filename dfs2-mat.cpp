@@ -85,7 +85,7 @@ int main(int argc, char* argv[]) {
     auto dfsRank = initialize_dfs(n, edges);
     auto time_end = s::chrono::steady_clock::now();
 
-    /*
+    
     //Print adjacency list for debugging
     for(int i = 0; i<n;i++){
         s::cout << "List " << i << " is: ";
@@ -100,7 +100,7 @@ int main(int argc, char* argv[]) {
     
     //Tree edge list
     for(int i = 0; i < n; i++){
-        s::cout << "List " << i << " is: ";
+        s::cout << "Tree edge list " << i << " is: ";
         for(int j = 0; j < n; j++){
             if(edges[i][j] > 1){
                 s::cout << j << " ";
@@ -109,16 +109,15 @@ int main(int argc, char* argv[]) {
         s::cout << '\n';
     }
     s::cout << '\n';
-    */
 
     s::chrono::duration<double, s::nano> time_elapsed = s::chrono::duration_cast<s::chrono::nanoseconds>(time_end - time_start);
     s::cout << "time elapsed is: " << s::setprecision(4) << time_elapsed.count()/1000 << "μs\n";
 
     // Print DFS ranks for testing
     
-    /*
+    
     for (int i = 0; i < dfsRank.size(); ++i) {
         s::cout << "Vertex " << i << " | " << dfsRank[i] << "\n";
     }
-    */
+    
 }

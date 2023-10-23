@@ -102,14 +102,14 @@ int main(int argc, char* argv[]) {
 
     // Print DFS ranks for testing
     //print tree list
-    for(tuple<int, int, bool> const & e : edges){
-        if(s::get<2>(e) == true){
-            s::cout << "Tree edge: (" << s::get<0>(e) << ',' << s::get<1>(e) << ")\n";
-        }
-    }    
-    s::cout << '\n';
-    for (int i = 0; i < dfsRank.size(); ++i) {
-        s::cout << "Vertex " << i << " | " << dfsRank[i] << "\n";
-    }
+    // for(tuple<int, int, bool> const & e : edges){
+    //     if(s::get<2>(e) == true){
+    //         s::cout << "Tree edge: (" << s::get<0>(e) << ',' << s::get<1>(e) << ")\n";
+    //     }
+    // }    
+    // s::cout << '\n';
+    // for (int i = 0; i < dfsRank.size(); ++i) {
+    //     s::cout << "Vertex " << i << " | " << dfsRank[i] << "\n";
+    // }
     
 }

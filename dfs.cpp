@@ -58,10 +58,12 @@ for example:
 
 int n, m;
 int* edges;
+bool* treeEdges;
 int* adj; int* adjAddress;
 
 void create_adjacency_list();
 void initializeDFS();
+int findEdgeIndex(int, int);
 
 int* dfs;
 int Nr=1;
@@ -74,11 +76,13 @@ int main(int n_args, char** args)
    FILE* fp = fopen(args[1],"r");
    fscanf(fp,"%d %d",&n,&m);
    edges = (int*)malloc(sizeof(int)*2*m);
+   treeEdges = (bool*)malloc(sizeof(bool)*m);
    for(int i=0;i<m;i++)
    {
       int x,y;
       fscanf(fp,"%d %d",&x,&y);
       edges[2*i]=x; edges[2*i+1]=y;
+      treeEdges[i] = false;
    }
    fclose(fp);
 
@@ -93,6 +97,14 @@ int main(int n_args, char** args)
    std::chrono::duration<double, std::nano> elapsed = std::chrono::duration_cast<std::chrono::nanoseconds>(time_end - time_start);
 	std::cout << elapsed.count()/1000 << "μs is the time\n";
 
+   
+   // printf("Tree edges: \n");
+   // for (int i=0;i<m;i++){
+   //    if(treeEdges[i]){
+   //       printf("(%d, %d)\n", edges[2*i], edges[2*i+1]);
+   //    }
+   // }
+
    /* //old method of timetelling
    gettimeofday(&end, 0);
 	long seconds = end.tv_sec - begin.tv_sec;
@@ -103,11 +115,11 @@ int main(int n_args, char** args)
 
    fp = fopen(args[2],"w");
 
-   for(int i=0;i<n;i++)
-   {
-         fprintf(fp,"node: %d , dfs: %d\n",i ,dfs[i]);
-   }
-   //fprintf(fp, "%lf\n", elapsed);
+   // for(int i=0;i<n;i++)
+   // {
+   //       fprintf(fp,"node: %d , dfs: %d\n",i ,dfs[i]);
+   // }
+   // //fprintf(fp, "%lf\n", elapsed);
    fclose(fp);
    
    return 0;
@@ -149,6 +161,8 @@ while(stack_pointer!=-1)//this is the DFS stack pointer, stack contains nodes
       {
          dfs[w]=Nr++;//add w to the top of the stack if it hasn't been assigned a DFS number yet
          stack[stack_pointer+1]=w; stackAddress[stack_pointer+1]=adjAddress[w];
+
+         treeEdges[findEdgeIndex(w, v)] = true;
 		 
          //stackAddress[stack_pointer]=i;      //why is stackAddress[stack_pointer] assigned with i when i already equals stackAddress[stack_pointer]? comment this out for now
          descend=1; break;  //this line breaks out of the loop so that adjacent nodes to v stop being searched and instead we descend to the children to explore them
@@ -164,6 +178,14 @@ while(stack_pointer!=-1)//this is the DFS stack pointer, stack contains nodes
 
 }//end DFS
 
+int findEdgeIndex(int x, int y){
+   for (int i = 0; i<m; i++){
+      if((x == edges[2*i] && y == edges[2*i+1]) || (y == edges[2*i] && x == edges[2*i+1])){
+         return i;
+      }
+   }
+   return -1;
+}
 
 
 void create_adjacency_list()
