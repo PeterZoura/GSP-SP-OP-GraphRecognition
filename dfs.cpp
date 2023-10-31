@@ -56,33 +56,54 @@ for example:
 #include <sys/time.h>
 #include <chrono>
 
-int n, m;
-int* edges;
-bool* treeEdges;
+typedef struct Edge_{
+   int source;
+   int sink;
+   int edge_num;
+   bool tree;
+} Edge;
+
+int n, m; //# of vertices and of edges
+Edge* edges; //m size array to contain all the edges
+int* parent; //parent[i] returns the parent of vertex i for purpose of calculating number of descendants
+//bool* treeEdges; //boolean array corresponding to edges array which states which ones are a tree edge
 int* adj; int* adjAddress;
+int* nDescendants;//will be using this b(x) e(x) technique I found on the internet, https://stackoverflow.com/questions/7989184/determine-if-u-is-an-ancestor-of-v
 
 void create_adjacency_list();
 void initializeDFS();
 int findEdgeIndex(int, int);
+bool isAncestor(int, int);
+int lexiCompare(int, int, int, int);
+void DFS(int);
+
 
 int* dfs;
 int Nr=1;
-
-void DFS(int);
 
 
 int main(int n_args, char** args)
 {
    FILE* fp = fopen(args[1],"r");
    fscanf(fp,"%d %d",&n,&m);
-   edges = (int*)malloc(sizeof(int)*2*m);
-   treeEdges = (bool*)malloc(sizeof(bool)*m);
+   edges = (Edge*)malloc(sizeof(Edge)*m);
+   //treeEdges = (bool*)malloc(sizeof(bool)*m);
+   parent = (int*)malloc(sizeof(int)*n);
+   for(int i=0; i<n; i++){
+      parent[i]=-1;
+   }
+   nDescendants = (int*)malloc(sizeof(int)*n);
+   for(int i = 0; i<n; i++){
+      nDescendants[i]=1;
+   }
+
    for(int i=0;i<m;i++)
    {
       int x,y;
       fscanf(fp,"%d %d",&x,&y);
-      edges[2*i]=x; edges[2*i+1]=y;
-      treeEdges[i] = false;
+      edges[i].source=(x>y)?y:x; edges[i].sink=(x>y)?x:y;
+      edges[i].edge_num=i;
+      edges[i].tree=false;
    }
    fclose(fp);
 
@@ -97,7 +118,11 @@ int main(int n_args, char** args)
    std::chrono::duration<double, std::nano> elapsed = std::chrono::duration_cast<std::chrono::nanoseconds>(time_end - time_start);
 	std::cout << elapsed.count()/1000 << "μs is the time\n";
 
-   
+
+   for(int i = 0; i<n; i++){
+      printf("i: %d | dfs: %d | nd: %d\n", i, dfs[i], nDescendants[i]);
+   }
+
    // printf("Tree edges: \n");
    // for (int i=0;i<m;i++){
    //    if(treeEdges[i]){
@@ -114,12 +139,11 @@ int main(int n_args, char** args)
    */
 
    fp = fopen(args[2],"w");
-
-   // for(int i=0;i<n;i++)
-   // {
-   //       fprintf(fp,"node: %d , dfs: %d\n",i ,dfs[i]);
-   // }
-   // //fprintf(fp, "%lf\n", elapsed);
+   for(int i=0;i<n;i++)
+   {
+         fprintf(fp,"node: %d , dfs: %d\n",i ,dfs[i]);
+   }
+   //fprintf(fp, "%lf\n", elapsed);
    fclose(fp);
    
    return 0;
@@ -159,20 +183,22 @@ while(stack_pointer!=-1)//this is the DFS stack pointer, stack contains nodes
       //1.1
       if(dfs[w]==-1)    //if it's not yet visited, assign dfs number
       {
+         parent[w]=v;
          dfs[w]=Nr++;//add w to the top of the stack if it hasn't been assigned a DFS number yet
          stack[stack_pointer+1]=w; stackAddress[stack_pointer+1]=adjAddress[w];
 
-         treeEdges[findEdgeIndex(w, v)] = true;
+         edges[findEdgeIndex(w, v)].tree = true;
 		 
          //stackAddress[stack_pointer]=i;      //why is stackAddress[stack_pointer] assigned with i when i already equals stackAddress[stack_pointer]? comment this out for now
          descend=1; break;  //this line breaks out of the loop so that adjacent nodes to v stop being searched and instead we descend to the children to explore them
       }
+      
    }
 
    if(descend){stack_pointer++; continue;}   //if the node has children to explore then descend to explore them
                                              //descending means to increase the stack pointer to traverse up the stack towards the top
                                              //since children get added on top of the stack, this is equivalent to descending down one branch
-
+   nDescendants[parent[v]]+=nDescendants[v];
    stack_pointer--;  //when the vertex on top of the stack has been fully explored, decrement the stack pointer to backtrack during DFS 
 }//end while
 
@@ -180,7 +206,7 @@ while(stack_pointer!=-1)//this is the DFS stack pointer, stack contains nodes
 
 int findEdgeIndex(int x, int y){
    for (int i = 0; i<m; i++){
-      if((x == edges[2*i] && y == edges[2*i+1]) || (y == edges[2*i] && x == edges[2*i+1])){
+      if((edges[i].source == (x>y)?y:x && edges[i].sink == (x>y)?x:y)){
          return i;
       }
    }
@@ -195,8 +221,8 @@ void create_adjacency_list()
    for(int i=0;i<=n;i++){adjAddress[i]=0;}			//initialize adjAddress to zeroes
    for(int i=0;i<m;i++){						//for every edge
 												//note that the first element is skipped in the assignment for loop, so the first element is always 0
-		adjAddress[edges[2*i]+1]++;				//references each source vertex 's' in edge list and increments adjAddress[s] by 1
-		adjAddress[edges[2*i+1]+1]++;				//references each target vertex 't' in edge list and increments adjAddress[t] by 1
+		adjAddress[edges[i].source+1]++;				//references each source vertex 's' in edge list and increments adjAddress[s] by 1
+		adjAddress[edges[i].sink+1]++;				//references each target vertex 't' in edge list and increments adjAddress[t] by 1
 	}//this for loop records the degree of each vertex by reading how many times it appears as a target and as a source of an edge in the edge list.
 	
    int* nextOut = (int*)malloc(sizeof(int)*(n+1));	//array of ints, 1 per vertex, but there is one more int here than there are vertices
@@ -221,8 +247,8 @@ void create_adjacency_list()
    for(int i=0;i<m;i++)
    {		//edges array has 2 ints per edge, each block represents 1 edge		00'00'00'00'00'00... for m blocks
 			//clearly these 2 ints represent the number of the source vertex and the number of the target vertex of each edge
-      int x=edges[2*i]; 	//read an edge into the variables x and y
-	  int y=edges[2*i+1];	//(x, y) is the edge we are referencing
+      int x=edges[i].source; 	//read an edge into the variables x and y
+	  int y=edges[i].sink;	//(x, y) is the edge we are referencing
       adj[nextOut[x]++]=y;	//access the adjacency list offset for vertex x and set the first adjacent vertex to y
 							//then increment the adjacency list offset so that the next vertex that's added in the list
 							//gets added at the end of the list, rather than at the beginning.
@@ -232,11 +258,12 @@ void create_adjacency_list()
    }
 }
 
-
-
-
-
-
+//is a the ancestor of b?
+//if yes return 1, if b is the ancestor of a return 2
+//if no return 0;
+bool isAncestor(int a, int b){
+   return (dfs[a] < dfs[b] && nDescendants[b] < ( dfs[a] + nDescendants[a] ) );
+}
 
 
 
