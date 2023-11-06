@@ -67,12 +67,12 @@ int* edges; //m size array to contain all the edges
 int* parent; //parent[i] returns the parent of vertex i for purpose of calculating number of descendants
 //bool* treeEdges; //boolean array corresponding to edges array which states which ones are a tree edge
 Edge* adj; int* adjAddress;
-int* nDescendants;//will be using this b(x) e(x) technique I found on the internet, https://stackoverflow.com/questions/7989184/determine-if-u-is-an-ancestor-of-v
+int* nDescendants;
 
 void create_adjacency_list();
 void initializeDFS();
 bool isAncestor(int, int);
-int lexiCompare(int, int, int, int);
+bool lexiCompare(int p, int q, int x, int y); //true if back-edge p-q is smaller than x-y 
 void DFS(int);
 
 
@@ -83,25 +83,28 @@ int Nr=1;
 int main(int n_args, char** args)
 {
    FILE* fp = fopen(args[1],"r");
-   fscanf(fp,"%d %d",&n,&m);
-   edges = (int*)malloc(sizeof(int)*2*m);
-   //treeEdges = (bool*)malloc(sizeof(bool)*m);
-   parent = (int*)malloc(sizeof(int)*n);
-   for(int i=0; i<n; i++){
-      parent[i]=-1;
-   }
-   nDescendants = (int*)malloc(sizeof(int)*n);
-   for(int i = 0; i<n; i++){
-      nDescendants[i]=1;
-   }
+   if(fscanf(fp,"%d %d",&n,&m)){
+      parent = (int*)malloc(sizeof(int)*n);
+      for(int i=0; i<n; i++){
+         parent[i]=-1;
+      }
+      nDescendants = (int*)malloc(sizeof(int)*n);
+      for(int i = 0; i<n; i++){
+         nDescendants[i]=1;
+      }
 
-   for(int i=0;i<m;i++)
-   {
-      int x,y;
-      fscanf(fp,"%d %d",&x,&y);
-      edges[2*i]=(x>y)?y:x; edges[2*i+1]=(x>y)?x:y;
+      edges = (int*)malloc(sizeof(int)*2*m);
+      for(int i=0;i<m;i++)
+      {
+         int x,y;
+         fscanf(fp,"%d %d",&x,&y);
+         edges[2*i]=(x>y)?y:x; edges[2*i+1]=(x>y)?x:y;
+      }
+      fclose(fp);
+   }else{
+      printf("Failure in reading input\n");
+      return -1;
    }
-   fclose(fp);
 
    create_adjacency_list();
 
@@ -116,21 +119,21 @@ int main(int n_args, char** args)
 
 
    for(int i = 0; i<n; i++){
-      printf("i: %d | dfs: %d | nd: %d\n", i, dfs[i], nDescendants[i]);
+   printf("i: %d | dfs: %d | nd: %d\n", i, dfs[i], nDescendants[i]);
    }
 
-   printf("\nEdges: \n");
-   for (int i=0;i<n;i++){
-      printf("List %d: ", i);
-      for(int j=adjAddress[i]; j<adjAddress[i+1]; j++){
-         if(adj[j].tree){
-            printf("T%d, ", adj[j].target);
-         }else{
-            printf("B%d, ", adj[j].target);
-         }
-      }
-      printf("\n");
-   }
+   // printf("\nEdges: \n");
+   // for (int i=0;i<n;i++){
+   //    printf("List %d: ", i);
+   //    for(int j=adjAddress[i]; j<adjAddress[i+1]; j++){
+   //       if(adj[j].tree){
+   //          printf("T%d, ", adj[j].target);
+   //       }else{
+   //          printf("B%d, ", adj[j].target);
+   //       }
+   //    }
+   //    printf("\n");
+   // }
 
    /* //old method of timetelling
    gettimeofday(&end, 0);
@@ -160,8 +163,9 @@ void initializeDFS()
    DFS(0);  
 }
 
-void DFS(int v)
+void DFS(int r)
 {
+   int v = r;
    dfs[v]=Nr++;
 
    int* stack = (int*)malloc(sizeof(int)*n);
@@ -203,7 +207,9 @@ while(stack_pointer!=-1)//this is the DFS stack pointer, stack contains nodes
    if(descend){stack_pointer++; continue;}   //if the node has children to explore then descend to explore them
                                              //descending means to increase the stack pointer to traverse up the stack towards the top
                                              //since children get added on top of the stack, this is equivalent to descending down one branch
-   nDescendants[parent[v]]+=nDescendants[v];
+   if(v != r){//r is root vertex, there is no such thing as parent[r], so we skip this line if v is the root r.
+      nDescendants[parent[v]]+=nDescendants[v];
+   }
    stack_pointer--;  //when the vertex on top of the stack has been fully explored, decrement the stack pointer to backtrack during DFS 
 }//end while
 
@@ -256,10 +262,22 @@ void create_adjacency_list()
 }
 
 //is a the ancestor of b?
-//if yes return 1, if b is the ancestor of a return 2
-//if no return 0;
+//return true if yes.
 bool isAncestor(int a, int b){
    return (dfs[a] < dfs[b] && nDescendants[b] < ( dfs[a] + nDescendants[a] ) );
+}
+
+//return true if back-edge (q <-- p) is smaller than (y <-- x)
+//return false if (y <-- x) is smaller than (q <-- p)
+bool lexiCompare(int p, int q, int x, int y){
+   if((dfs[q] < dfs[y]) 
+   || ( (dfs[q] == dfs[y]) && (dfs[p] < dfs[x]) && !isAncestor(p, x) ) 
+   || ( (dfs[q] == dfs[y]) && isAncestor(x, p) ) 
+   ){
+      return true;
+   }else{
+      return false;
+   }
 }
 
 Edge * getEdge(int a, int b){
