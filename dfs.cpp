@@ -56,23 +56,20 @@ for example:
 #include <sys/time.h>
 #include <chrono>
 
-typedef struct Edge_{
-   int target; //target vertex of the edge
-   bool tree;
-} Edge;
-Edge * getEdge(int, int);
 
-int n, m; //# of vertices and of edges
-int* edges; //m size array to contain all the edges
+int n, m; //number of vertices and of edges
+int* edges; //2*m size array to contain all the edges
 int* parent; //parent[i] returns the parent of vertex i for purpose of calculating number of descendants
 //bool* treeEdges; //boolean array corresponding to edges array which states which ones are a tree edge
-Edge* adj; int* adjAddress;
+int* ear;
+int* adj; int* adjAddress;
 int* nDescendants;
 
 void create_adjacency_list();
 void initializeDFS();
 bool isAncestor(int, int);
 bool lexiCompare(int p, int q, int x, int y); //true if back-edge p-q is smaller than x-y 
+bool isTree(int, int);
 void DFS(int);
 
 
@@ -92,6 +89,11 @@ int main(int n_args, char** args)
       for(int i = 0; i<n; i++){
          nDescendants[i]=1;
       }
+      ear = (int*)malloc(sizeof(int)*2*n);
+      for(int i = 0; i<n;i++){
+         ear[2*i] = -1;
+         ear[2*i+1] = -1;
+      }
 
       edges = (int*)malloc(sizeof(int)*2*m);
       for(int i=0;i<m;i++)
@@ -100,11 +102,12 @@ int main(int n_args, char** args)
          fscanf(fp,"%d %d",&x,&y);
          edges[2*i]=(x>y)?y:x; edges[2*i+1]=(x>y)?x:y;
       }
-      fclose(fp);
    }else{
+      
       printf("Failure in reading input\n");
       return -1;
    }
+   fclose(fp);
 
    create_adjacency_list();
 
@@ -119,7 +122,7 @@ int main(int n_args, char** args)
 
 
    for(int i = 0; i<n; i++){
-   printf("i: %d | dfs: %d | nd: %d\n", i, dfs[i], nDescendants[i]);
+   printf("i: %d | dfs: %d | nd: %d | ear: %d,%d\n", i, dfs[i], nDescendants[i], ear[2*i], ear[2*i+1]);
    }
 
    // printf("\nEdges: \n");
@@ -185,21 +188,24 @@ while(stack_pointer!=-1)//this is the DFS stack pointer, stack contains nodes
    //1 iterate through adjacent vertices to vertex on top of stack
    for(int i=stackAddress[stack_pointer];i<adjAddress[v+1];i++)
    {
-      int w=adj[i].target; //w is a vertex adjacent to v
+      int w=adj[i]; //w is a vertex adjacent to v
       //1.1
       if(dfs[w]==-1)    //if it's not yet visited, assign dfs number
       {
          parent[w]=v;
          dfs[w]=Nr++;//add w to the top of the stack if it hasn't been assigned a DFS number yet
-         stack[stack_pointer+1]=w; stackAddress[stack_pointer+1]=adjAddress[w];
-         
-         getEdge(v, w)->tree = true;
-         getEdge(w, v)->tree = true;
-         
-         
+         stack[stack_pointer+1]=w; stackAddress[stack_pointer+1]=adjAddress[w];         
 		 
          //stackAddress[stack_pointer]=i;      //why is stackAddress[stack_pointer] assigned with i when i already equals stackAddress[stack_pointer]? comment this out for now
          descend=1; break;  //this line breaks out of the loop so that adjacent nodes to v stop being searched and instead we descend to the children to explore them
+      }else if(dfs[w] < dfs[v] && w != parent[v]){
+         ear[2*v] = v;
+         ear[2*v+1] = w;
+      }else if(w != parent[v] && isTree(v, w)){
+         if(ear[2*v] == -1 || lexiCompare(ear[2*w], ear[2*w+1], ear[2*v], ear[2*v+1])){
+            ear[2*v] = ear[2*w];
+            ear[2*v+1] = ear[2*w+1];
+         }
       }
       
    }
@@ -219,7 +225,7 @@ while(stack_pointer!=-1)//this is the DFS stack pointer, stack contains nodes
 
 void create_adjacency_list()
 {
-   adj = (Edge*)malloc(sizeof(Edge)*4*m);				//array of 4 ints per edges	each block represents 1 edge	0000'0000'0000'0000'0000 for m blocks
+   adj = (int*)malloc(sizeof(int)*4*m);				//array of 4 ints per edges	each block represents 1 edge	0000'0000'0000'0000'0000 for m blocks
    adjAddress = (int*)malloc(sizeof(int)*(n+1));		//array of ints. size = |V| + 1		0'0'0'0'0'0'0'0'0'0'0'0'0'0		why is there 1 extra int? and what does it represent?
    for(int i=0;i<=n;i++){adjAddress[i]=0;}			//initialize adjAddress to zeroes
    for(int i=0;i<m;i++){						//for every edge
@@ -252,19 +258,19 @@ void create_adjacency_list()
 			//clearly these 2 ints represent the number of the source vertex and the number of the target vertex of each edge
       int x=edges[2*i]; 	//read an edge into the variables x and y
 	   int y=edges[2*i+1];	//(x, y) is the edge we are referencing
-      adj[nextOut[x]].target=y;	//access the adjacency list offset for vertex x and set the first adjacent vertex to y
-		adj[nextOut[x]++].tree=false;	//then increment the adjacency list offset so that the next vertex that's added in the list
-							//gets added at the end of the list, rather than at the beginning.
-      adj[nextOut[y]].target=x;	//repeat for the adjacency list of vertex y
-		adj[nextOut[y]++].tree=false; //this incrementing of the offsets in nextOut is the reason that we copied the list adjAddress rather than modifying adjAddress
-							//because adjAddress is needed to be used to access the beginnings of the adjacency lists of each vertex later in the program.
+      adj[nextOut[x]++]=y;	//access the adjacency list offset for vertex x and set the first adjacent vertex to y
+		            	      //then increment the adjacency list offset so that the next vertex that's added in the list
+						   	   //gets added at the end of the list, rather than at the beginning.
+      adj[nextOut[y]++]=x;	//repeat for the adjacency list of vertex y
+		                     //this incrementing of the offsets in nextOut is the reason that we copied the list adjAddress rather than modifying adjAddress
+							      //because adjAddress is needed to be used to access the beginnings of the adjacency lists of each vertex later in the program.
    }
 }
 
 //is a the ancestor of b?
 //return true if yes.
 bool isAncestor(int a, int b){
-   return (dfs[a] < dfs[b] && nDescendants[b] < ( dfs[a] + nDescendants[a] ) );
+   return (dfs[a] < dfs[b] && dfs[b] < ( dfs[a] + nDescendants[a] ) );
 }
 
 //return true if back-edge (q <-- p) is smaller than (y <-- x)
@@ -280,13 +286,8 @@ bool lexiCompare(int p, int q, int x, int y){
    }
 }
 
-Edge * getEdge(int a, int b){
-   for(int i = adjAddress[a]; i<adjAddress[a+1]; i++){
-      if(adj[i].target==b){
-         return &adj[i];
-      }
-   }
-   return nullptr;
+bool isTree(int a, int b){
+    return (parent[a] == b || parent[b] == a);
 }
 
 

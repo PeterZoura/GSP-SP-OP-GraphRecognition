@@ -1,3 +1,6 @@
+//ask professor: how to compare the back edges to rank them?
+//if I 
+
 #include <vector>
 #include <tuple>
 #include <iostream>
@@ -10,11 +13,6 @@ using std::pair;
 using std::vector;
 using std::tuple;
 
-struct Edge{
-    int target;
-    bool tree;
-};
-Edge * getEdge(int, int,vector<vector<Edge>> &);
 
 struct graphDataHolder{
     int n; //equal to |V| size of graph
@@ -22,11 +20,15 @@ struct graphDataHolder{
     vector<int> parent; //vector containing data so that parent[3] gives the number of the vertex that is parent of 3 in the dfs tree
     vector<int> nDescendants; //vector containing number of descendants of a vertex including itself as a descendant.
     vector<int> dfsRank; //holds the number that represents in the order that the dfs accessed each vertex in the graph in.
-    vector<vector<Edge>> adjList; //adjList[0] contains the vector of Edges that are connected to vertex 0. Edge contains target vertex and tree edge boolean.
+    vector<vector<int>> adjList; //adjList[0] contains the vector of Edges that are connected to vertex 0. Edge contains target vertex and tree edge boolean.
+    vector<pair<int, int>> ear; //holds ear decomposition data. pair.first must be source, pair.second must be sink
 };
 
 namespace s=std;
 
+bool isTree(int a, int b, graphDataHolder & gD){
+    return (gD.parent[a] == b || gD.parent[b] == a);
+}
 
 void create_edges(int const & num_v, int const & num_e, vector<pair<int, int>>& edges, s::ifstream& istream) {
     edges.reserve(num_e);
@@ -37,14 +39,32 @@ void create_edges(int const & num_v, int const & num_e, vector<pair<int, int>>& 
     }
 }
 
-void create_adjacency_list(int const n, vector<pair<int, int>> const & edges, vector<vector<Edge>>& adj) {
+void create_adjacency_list(int const n, vector<pair<int, int>> const & edges, vector<vector<int>>& adj) {
     adj.resize(n);
     for (const auto& e : edges) {
         int x = e.first;
         int y = e.second;
-        adj[x].emplace_back(y, false);
-        adj[y].emplace_back(x, false);
+        adj[x].emplace_back(y);
+        adj[y].emplace_back(x);
     }
+}
+
+bool isAncestor(int a, int b, graphDataHolder & gD){
+   return (gD.dfsRank[a] <= gD.dfsRank[b] && gD.dfsRank[b] < ( gD.dfsRank[a] + gD.nDescendants[a] ) );
+}
+
+
+//return true if back-edge (q <-- p) is smaller than (y <-- x)
+//return false if (y <-- x) is smaller than (q <-- p)
+bool lexiCompare(int p, int q, int x, int y, graphDataHolder & gD){
+   if((gD.dfsRank[q] < gD.dfsRank[y]) 
+   || ( (gD.dfsRank[q] == gD.dfsRank[y]) && (gD.dfsRank[p] < gD.dfsRank[x]) && !isAncestor(p, x, gD) ) 
+   || ( (gD.dfsRank[q] == gD.dfsRank[y]) && isAncestor(x, p, gD) ) 
+   ){
+      return true;
+   }else{
+      return false;
+   }
 }
 
 void dfs(int starting_vertex, graphDataHolder & gD) {
@@ -57,19 +77,29 @@ void dfs(int starting_vertex, graphDataHolder & gD) {
         int topOfStack = the_stack.top();
         bool descend = false;
 
-        for (Edge w : gD.adjList[topOfStack]) {
-            if (gD.dfsRank[w.target] == -1) {
-                gD.dfsRank[w.target] = rank++;
-                gD.parent[w.target] = topOfStack;
+        for (int w : gD.adjList[topOfStack]) {
+            if (gD.dfsRank[w] == -1) {
+                gD.dfsRank[w] = rank++;
+                gD.parent[w] = topOfStack;
 
-                getEdge(topOfStack, w.target, gD.adjList)->tree = true;
-                getEdge(w.target, topOfStack, gD.adjList)->tree = true;
-                
-                the_stack.push(w.target);
+                the_stack.push(w);
                 descend = true;
                 break;
+            }else if(gD.dfsRank[w] < gD.dfsRank[topOfStack] && w != gD.parent[topOfStack]){
+                //back edge detected
+                gD.ear[topOfStack].first = topOfStack;
+                gD.ear[topOfStack].second = w;
+            }else if(w != gD.parent[topOfStack] && isTree(w, topOfStack, gD)){
+                //back edge was not detected but child is finished processing, then assign ear of topOfStack.
+                if(gD.ear[topOfStack].first == -1 || lexiCompare(gD.ear[w].first, gD.ear[w].second, gD.ear[topOfStack].first, gD.ear[topOfStack].second, gD)){
+                    gD.ear[topOfStack].first = gD.ear[w].first;
+                    gD.ear[topOfStack].second = gD.ear[w].second;
+                }
             }
+            //if back edge found, assign ear(topOfStack) = (topOfStack, w) 
         }
+            //if there are no back edges and every child is searched then assign ear(topOfStack) = ear(child)
+            //if there are multiple children then 
 
         if (descend) {
             continue;
@@ -80,17 +110,6 @@ void dfs(int starting_vertex, graphDataHolder & gD) {
             the_stack.pop();
         }
     }
-}
-
-Edge * getEdge(int a, int b, vector<vector<Edge>> & adj){
-    int m = 0;
-    for(auto i : adj[a]){
-        if(i.target==b){
-            return &adj[a][m];
-        }
-        m++;
-    }
-    return nullptr;
 }
 
 int main(int argc, char* argv[]) {
@@ -105,7 +124,8 @@ int main(int argc, char* argv[]) {
     gD.dfsRank = s::vector<int>(gD.n, -1);
     gD.nDescendants = s::vector<int>(gD.n, 1);
     gD.adjList.resize(gD.n);
-    
+    gD.ear = s::vector<pair<int, int>>(gD.n, s::pair<int, int>(-1, -1));
+
     vector<pair<int, int>> edges;
     create_edges(gD.n, gD.e, edges, is);
     create_adjacency_list(gD.n, edges, gD.adjList);
@@ -115,11 +135,11 @@ int main(int argc, char* argv[]) {
     auto time_end = s::chrono::steady_clock::now();
     
     //Print adjacency list for debugging
-    // for(int i =0; i<gD.adjList.size();i++){
+    // for(int i = 0; i<gD.adjList.size();i++){
     //     s::cout << "List " << i << " is: ";
-    //     for(Edge j : gD.adjList[i]){
-    //         char c = (j.tree?'T':'B');
-    //         s::cout << c << j.target << " ";
+    //     for(int j : gD.adjList[i]){
+    //         char c = (isTree(j, i, gD)?'T':'B');
+    //         s::cout << c << j << " ";
     //     }
     //     s::cout << '\n';
     // }
@@ -131,9 +151,9 @@ int main(int argc, char* argv[]) {
 
     //Print DFS ranks for testing
     //print tree list
-    s::cout << '\n';
-    for (int i = 0; i < gD.dfsRank.size(); ++i) {
-        s::cout << "Vertex " << i << " | DFS " << gD.dfsRank[i] << " | Parent " << gD.parent[i] << " | nDescendants " << gD.nDescendants[i] << "\n";
-    }
+    // s::cout << '\n';
+    // for (int i = 0; i < gD.dfsRank.size(); ++i) {
+    //     s::cout << "Vertex " << i << " | DFS " << gD.dfsRank[i] << " | Parent " << gD.parent[i] << " | nDescendants " << gD.nDescendants[i] << " | ear " << gD.ear[i].first << ',' << gD.ear[i].second << "\n";
+    // }
     
 }
