@@ -93,11 +93,7 @@ void dfs(int starting_vertex, graphDataHolder & gD) {
                     gD.ear[topOfStack].second = gD.ear[w].second;
                 }
             }
-            //if back edge found, assign ear(topOfStack) = (topOfStack, w) 
         }
-            //if there are no back edges and every child is searched then assign ear(topOfStack) = ear(child)
-            //if there are multiple children then 
-
         if (descend) {
             continue;
         } else {
