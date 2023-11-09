@@ -1,6 +1,3 @@
-//ask professor: how to compare the back edges to rank them?
-//if I 
-
 #include <vector>
 #include <tuple>
 #include <iostream>
