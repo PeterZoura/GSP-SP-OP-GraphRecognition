@@ -7,7 +7,6 @@ g++ dfs.cpp -o dfs -O3
 
 run:
 ./dfs 32V.txt output.txt
-
 any graph can be substituted for 32V.txt, but it must be in the same folder as the compiled program
 
 Compile C++ style dfs:
