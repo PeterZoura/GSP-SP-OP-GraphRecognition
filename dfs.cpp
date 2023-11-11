@@ -121,9 +121,9 @@ int main(int n_args, char** args)
 	std::cout << elapsed.count()/1000 << "μs is the time\n";
 
 
-   for(int i = 0; i<n; i++){
-   printf("i: %d | dfs: %d | nd: %d | ear: %d,%d\n", i, dfs[i], nDescendants[i], ear[2*i], ear[2*i+1]);
-   }
+   // for(int i = 0; i<n; i++){
+   // printf("i: %d | dfs: %d | nd: %d | ear: %d,%d\n", i, dfs[i], nDescendants[i], ear[2*i], ear[2*i+1]);
+   // }
 
    // printf("\nEdges: \n");
    // for (int i=0;i<n;i++){
@@ -146,13 +146,13 @@ int main(int n_args, char** args)
 	printf("Total time= %f\n", elapsed);
    */
 
-   fp = fopen(args[2],"w");
-   for(int i=0;i<n;i++)
-   {
-         fprintf(fp,"node: %d , dfs: %d\n",i ,dfs[i]);
-   }
-   //fprintf(fp, "%lf\n", elapsed);
-   fclose(fp);
+   // fp = fopen(args[2],"w");
+   // for(int i=0;i<n;i++)
+   // {
+   //       fprintf(fp,"node: %d , dfs: %d\n",i ,dfs[i]);
+   // }
+   // //fprintf(fp, "%lf\n", elapsed);
+   // fclose(fp);
    
    return 0;
 }
