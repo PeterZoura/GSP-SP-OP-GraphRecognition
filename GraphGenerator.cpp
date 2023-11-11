@@ -133,7 +133,7 @@ int main(int n_args, char** args)
    fprintf(fp,"%ld %ld\n",n,m);
    for(long i=0;i<m;i++)
    {
-      fprintf(fp,"%ld %ld\n",edges[2*i]+1,edges[2*i+1]+1);
+      fprintf(fp,"%ld %ld\n",edges[2*i],edges[2*i+1]);
    }
    fclose(fp);
 
