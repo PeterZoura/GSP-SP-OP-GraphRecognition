@@ -1,4 +1,5 @@
-//usage: ./dfs <input_graph> <output_file>
+//usage: ./dfs <input_graph> <# of runs>
+//It runs many times and gives average runtime
 
 /*
 terminology guide
@@ -50,7 +51,9 @@ for example:
 
 */
 
+#include <vector>
 #include <iostream>
+#include <iomanip>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/time.h>
@@ -61,49 +64,52 @@ int n, m; //number of vertices and of edges
 int* edges; //2*m size array to contain all the edges
 int* parent; //parent[i] returns the parent of vertex i for purpose of calculating number of descendants
 //bool* treeEdges; //boolean array corresponding to edges array which states which ones are a tree edge
-int* ear;
-int* adj; int* adjAddress;
 int* nDescendants;
+int* dfs;
+int* adj; int* adjAddress;
+int* ear;
 
 void create_adjacency_list();
-void initializeDFS();
 bool isAncestor(int, int);
 bool lexiCompare(int p, int q, int x, int y); //true if back-edge p-q is smaller than x-y 
 bool isTree(int, int);
 void DFS(int);
+double main2(char *);
 
-
-int* dfs;
 int Nr=1;
 
 
 int main(int n_args, char** args)
 {
-   FILE* fp = fopen(args[1],"r");
+   int times = atoi(args[2]);
+   double ave = 0.0;
+   for(int i = 0; i<times; i++){
+      ave += main2(args[1]);
+   }
+   std::cout << "Average of "<< times << " runs: " << ave/(0.0 + times) << "μs\n";
+   return 0;
+}
+
+double main2(char * fileInputName){
+   FILE* fp = fopen(fileInputName,"r");
    if(fscanf(fp,"%d %d",&n,&m)){
+      dfs = (int*)malloc(sizeof(int)*n); 
+      for(int i=0;i<n;i++){ dfs[i]=-1; }
       parent = (int*)malloc(sizeof(int)*n);
-      for(int i=0; i<n; i++){
-         parent[i]=-1;
-      }
+      for(int i=0; i<n; i++){ parent[i]=-1; }
       nDescendants = (int*)malloc(sizeof(int)*n);
-      for(int i = 0; i<n; i++){
-         nDescendants[i]=1;
-      }
+      for(int i = 0; i<n; i++){ nDescendants[i]=1; }
       ear = (int*)malloc(sizeof(int)*2*n);
       for(int i = 0; i<n;i++){
          ear[2*i] = -1;
-         ear[2*i+1] = -1;
-      }
-
+         ear[2*i+1] = -1;}
       edges = (int*)malloc(sizeof(int)*2*m);
-      for(int i=0;i<m;i++)
-      {
+      for(int i=0;i<m;i++){
          int x,y;
          fscanf(fp,"%d %d",&x,&y);
-         edges[2*i]=(x>y)?y:x; edges[2*i+1]=(x>y)?x:y;
-      }
+         edges[2*i]=(x>y)?y:x;
+         edges[2*i+1]=(x>y)?x:y;}
    }else{
-      
       printf("Failure in reading input\n");
       return -1;
    }
@@ -111,21 +117,17 @@ int main(int n_args, char** args)
 
    create_adjacency_list();
 
-   struct timeval begin, end;
-   //gettimeofday(&begin, 0);  
    auto time_start = std::chrono::steady_clock::now();
-   initializeDFS();
+   DFS(0);
    auto time_end = std::chrono::steady_clock::now();
-
    std::chrono::duration<double, std::nano> elapsed = std::chrono::duration_cast<std::chrono::nanoseconds>(time_end - time_start);
-	std::cout << elapsed.count()/1000 << "μs is the time\n";
-   std::cout << Nr << '\n';
+   //std::cout << std::setprecision(4) << elapsed.count()/1000 << "μs is the average time\n";
 
    // for(int i = 0; i<n; i++){
    // printf("i: %d | dfs: %d | nd: %d | ear: %d,%d\n", i, dfs[i], nDescendants[i], ear[2*i], ear[2*i+1]);
    // }
 
-   // printf("\nEdges: \n");
+   // printf("\nAdjacency List: \n");
    // for (int i=0;i<n;i++){
    //    printf("List %d: ", i);
    //    for(int j=adjAddress[i]; j<adjAddress[i+1]; j++){
@@ -138,14 +140,11 @@ int main(int n_args, char** args)
    //    printf("\n");
    // }
 
-   /* //old method of timetelling
-   gettimeofday(&end, 0);
-	long seconds = end.tv_sec - begin.tv_sec;
-	long microseconds = end.tv_usec - begin.tv_usec;
-	double elapsed = seconds + microseconds*1e-6;
-	printf("Total time= %f\n", elapsed);
-   */
-
+   // This code writes node data to an output file.
+   // But since I implemented a loop that takes average
+   // This code will overwrite the file with the contents 
+   // Of the last run of the search, which should be identical
+   // To the output of every run.
    // fp = fopen(args[2],"w");
    // for(int i=0;i<n;i++)
    // {
@@ -154,18 +153,8 @@ int main(int n_args, char** args)
    // //fprintf(fp, "%lf\n", elapsed);
    // fclose(fp);
    
-   return 0;
+   return elapsed.count()/1000;
 }
-
-
-void initializeDFS()
-{
- 
-   dfs = (int*)malloc(sizeof(int)*n); 
-   for(int i=0;i<n;i++){dfs[i]=-1;}
-   DFS(0);  
-}
-
 void DFS(int r)
 {
    int v = r;
@@ -210,6 +199,7 @@ while(stack_pointer!=-1)//this is the DFS stack pointer, stack contains nodes
    if(v != r){//r is root vertex, there is no such thing as parent[r], so we skip this line if v is the root r.
       nDescendants[parent[v]]+=nDescendants[v];
    }
+   
    if(dfs[v] > 2 && lexiCompare(ear[2*v], ear[2*v+1], ear[2*parent[v]], ear[2*parent[v]+1])){
       ear[2*parent[v]] = ear[2*v];
       ear[2*parent[v]+1] = ear[2*v+1];
@@ -218,8 +208,6 @@ while(stack_pointer!=-1)//this is the DFS stack pointer, stack contains nodes
 }//end while
 
 }//end DFS
-
-
 
 void create_adjacency_list()
 {

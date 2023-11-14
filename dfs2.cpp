@@ -1,5 +1,7 @@
+//usage: ./dfs2 <input_graph> <# of runs>
+//It runs many times and gives average runtime
+
 #include <vector>
-#include <tuple>
 #include <iostream>
 #include <fstream>
 #include <stack>
@@ -8,7 +10,6 @@
 
 using std::pair;
 using std::vector;
-using std::tuple;
 
 
 struct graphDataHolder{
@@ -23,43 +24,68 @@ struct graphDataHolder{
 
 namespace s=std;
 
-bool isTree(int a, int b, graphDataHolder & gD){
-    return (gD.parent[a] == b || gD.parent[b] == a);
-}
-
-void create_edges(int const & num_v, int const & num_e, vector<pair<int, int>>& edges, s::ifstream& istream) {
-    edges.reserve(num_e);
-    for (int i = 0; i < num_e; ++i) {
-        int x, y;
-        istream >> x >> y;
-        edges.emplace_back( (x>y?y:x), (x>y?x:y));
+void create_adjacency_list(int const &, vector<pair<int, int>> const &, vector<vector<int>> &);
+void create_edges(int const &, int const &, vector<pair<int, int>>&, s::ifstream&);
+bool isAncestor(int  const &, int  const &, graphDataHolder  const &);
+bool lexiCompare(int const &, int const &, int const &, int const &, graphDataHolder  const &);
+bool isTree(int const &, int const &, graphDataHolder const &);
+void genCS(int const &, graphDataHolder &);
+double main2(char *);
+int main(int argc, char* argv[]) {
+    s::ios::sync_with_stdio(false); //I heard this helps optimize
+    int times = atoi(argv[2]);
+    double ave = 0.0;
+    for(int i = 0; i<times; i++){
+        ave += main2(argv[1]);
     }
+    s::cout << "average of " << times << " runs: " << ave/(0.0 + times) << "μs\n";
+    return 0;
 }
 
-void create_adjacency_list(int const n, vector<pair<int, int>> const & edges, vector<vector<int>>& adj) {
-    adj.resize(n);
-    for (const auto& e : edges) {
-        int x = e.first;
-        int y = e.second;
-        adj[x].emplace_back(y);
-        adj[y].emplace_back(x);
-    }
+double main2(char * inputFileName){
+    graphDataHolder gD; //gD stands for Graph Data
+    
+    s::ifstream is(inputFileName);
+    is >> gD.n >> gD.e;
+    
+    gD.dfsRank = s::vector<int>(gD.n, -1);
+    gD.parent = s::vector<int>(gD.n, -1);
+    gD.nDescendants = s::vector<int>(gD.n, 1);
+    gD.ear = s::vector<pair<int, int>>(gD.n, s::pair<int, int>(-1, -1));
+    gD.adjList.resize(gD.n);
+    
+    vector<pair<int, int>> edges;
+    create_edges(gD.n, gD.e, edges, is);
+    create_adjacency_list(gD.n, edges, gD.adjList);
+
+    auto time_start = s::chrono::steady_clock::now();
+    genCS(0, gD);
+    auto time_end = s::chrono::steady_clock::now();
+    s::chrono::duration<double, s::nano> time_elapsed = s::chrono::duration_cast<s::chrono::nanoseconds>(time_end - time_start);
+    //s::cout << "time elapsed is: " << s::setprecision(4) << time_elapsed.count()/1000 << "μs\n";
+    
+
+    //Print adjacency list for debugging
+    // for(int i = 0; i<gD.adjList.size();i++){
+    //     s::cout << "List " << i << " is: ";
+    //     for(int j : gD.adjList[i]){
+    //         char c = (isTree(j, i, gD)?'T':'B');
+    //         s::cout << c << j << " ";
+    //     }
+    //     s::cout << '\n';
+    // }
+    // s::cout << '\n';
+
+    // Print DFS ranks for testing
+    // s::cout << '\n';
+    // for (int i = 0; i < gD.dfsRank.size(); ++i) {
+    //     s::cout << "Vertex " << i << " | DFS " << gD.dfsRank[i] << " | Parent " << gD.parent[i] << " | nDescendants " << gD.nDescendants[i] << " | ear " << gD.ear[i].first << ',' << gD.ear[i].second << "\n";
+    // }
+
+    return time_elapsed.count()/1000;
 }
 
-bool isAncestor(int a, int b, graphDataHolder & gD){
-   return (gD.dfsRank[a] <= gD.dfsRank[b] && gD.dfsRank[b] < ( gD.dfsRank[a] + gD.nDescendants[a] ) );
-}
-
-
-//return true if back-edge (q <-- p) is smaller than (y <-- x)
-//return false if (y <-- x) is smaller than (q <-- p)
-bool lexiCompare(int p, int q, int x, int y, graphDataHolder & gD){
-    return x == -1 || (gD.dfsRank[q] < gD.dfsRank[y]) 
-            || ( (gD.dfsRank[q] == gD.dfsRank[y]) && (gD.dfsRank[p] < gD.dfsRank[x]) && !isAncestor(p, x, gD) ) 
-            || ( (gD.dfsRank[q] == gD.dfsRank[y]) && isAncestor(x, p, gD) );
-   }
-
-int genCS(int starting_vertex, graphDataHolder & gD) {
+void genCS(int const & starting_vertex, graphDataHolder & gD) {
     s::stack<int> the_stack;
     the_stack.push(starting_vertex);
     int dfsNumber = 1;
@@ -71,8 +97,8 @@ int genCS(int starting_vertex, graphDataHolder & gD) {
 
         for (int w : gD.adjList[topOfStack]) {
             if (gD.dfsRank[w] == -1) {
-                gD.dfsRank[w] = dfsNumber++;
                 gD.parent[w] = topOfStack;
+                gD.dfsRank[w] = dfsNumber++;
                 the_stack.push(w);
                 descend = true;
                 break;
@@ -107,52 +133,39 @@ int genCS(int starting_vertex, graphDataHolder & gD) {
         }
         the_stack.pop();
     }
-    return dfsNumber;
 }
 
-int main(int argc, char* argv[]) {
-    s::ios::sync_with_stdio(false);
+void create_adjacency_list(int const & n, vector<pair<int, int>> const & edges, vector<vector<int>>& adj) {
+    adj.resize(n);
+    for (const auto& e : edges) {
+        int x = e.first;
+        int y = e.second;
+        adj[x].emplace_back(y);
+        adj[y].emplace_back(x);
+    }
+}
 
-    graphDataHolder gD; //gD stands for Graph Data
-    
-    s::ifstream is(argv[1]);
-    is >> gD.n >> gD.e;
+void create_edges(int const & num_v, int const & num_e, vector<pair<int, int>>& edges, s::ifstream& istream) {
+    edges.reserve(num_e);
+    for (int i = 0; i < num_e; ++i) {
+        int x, y;
+        istream >> x >> y;
+        edges.emplace_back( (x>y?y:x), (x>y?x:y));
+    }
+}
 
-    gD.parent = s::vector<int>(gD.n, -1);
-    gD.dfsRank = s::vector<int>(gD.n, -1);
-    gD.nDescendants = s::vector<int>(gD.n, 1);
-    gD.adjList.resize(gD.n);
-    gD.ear = s::vector<pair<int, int>>(gD.n, s::pair<int, int>(-1, -1));
+bool isAncestor(int const & a, int const & b, graphDataHolder const & gD){
+   return (gD.dfsRank[a] <= gD.dfsRank[b] && gD.dfsRank[b] < ( gD.dfsRank[a] + gD.nDescendants[a] ) );
+}
 
-    vector<pair<int, int>> edges;
-    create_edges(gD.n, gD.e, edges, is);
-    create_adjacency_list(gD.n, edges, gD.adjList);
+//return true if back-edge (q <-- p) is smaller than (y <-- x)
+//return false if (y <-- x) is smaller than (q <-- p)
+bool lexiCompare(int const & p, int const & q, int const & x, int const & y, graphDataHolder const & gD){
+    return x == -1 || (gD.dfsRank[q] < gD.dfsRank[y]) 
+            || ( (gD.dfsRank[q] == gD.dfsRank[y]) && (gD.dfsRank[p] < gD.dfsRank[x]) && !isAncestor(p, x, gD) ) 
+            || ( (gD.dfsRank[q] == gD.dfsRank[y]) && isAncestor(x, p, gD) );
+   }
 
-    auto time_start = s::chrono::steady_clock::now();
-    int d = genCS(0, gD);
-    auto time_end = s::chrono::steady_clock::now();
-    
-    //Print adjacency list for debugging
-    // for(int i = 0; i<gD.adjList.size();i++){
-    //     s::cout << "List " << i << " is: ";
-    //     for(int j : gD.adjList[i]){
-    //         char c = (isTree(j, i, gD)?'T':'B');
-    //         s::cout << c << j << " ";
-    //     }
-    //     s::cout << '\n';
-    // }
-    // s::cout << '\n';
-
-
-    s::chrono::duration<double, s::nano> time_elapsed = s::chrono::duration_cast<s::chrono::nanoseconds>(time_end - time_start);
-    s::cout << d << " and time elapsed is: " << s::setprecision(4) << time_elapsed.count()/1000 << "μs\n";
-    
-
-    // Print DFS ranks for testing
-    // print tree list
-    // s::cout << '\n';
-    // for (int i = 0; i < gD.dfsRank.size(); ++i) {
-    //     s::cout << "Vertex " << i << " | DFS " << gD.dfsRank[i] << " | Parent " << gD.parent[i] << " | nDescendants " << gD.nDescendants[i] << " | ear " << gD.ear[i].first << ',' << gD.ear[i].second << "\n";
-    // }
-    
+bool isTree(int const & a, int  const & b, graphDataHolder const & gD){
+    return (gD.parent[a] == b || gD.parent[b] == a);
 }
