@@ -119,7 +119,7 @@ int main(int n_args, char** args)
 
    std::chrono::duration<double, std::nano> elapsed = std::chrono::duration_cast<std::chrono::nanoseconds>(time_end - time_start);
 	std::cout << elapsed.count()/1000 << "μs is the time\n";
-
+   std::cout << Nr << '\n';
 
    // for(int i = 0; i<n; i++){
    // printf("i: %d | dfs: %d | nd: %d | ear: %d,%d\n", i, dfs[i], nDescendants[i], ear[2*i], ear[2*i+1]);
@@ -201,13 +201,7 @@ while(stack_pointer!=-1)//this is the DFS stack pointer, stack contains nodes
       }else if(dfs[w] < dfs[v] && w != parent[v]){
          ear[2*v] = v;
          ear[2*v+1] = w;
-      }else if(w != parent[v] && isTree(v, w)){
-         if(ear[2*v] == -1 || lexiCompare(ear[2*w], ear[2*w+1], ear[2*v], ear[2*v+1])){
-            ear[2*v] = ear[2*w];
-            ear[2*v+1] = ear[2*w+1];
-         }
-      }
-      
+      }      
    }
 
    if(descend){stack_pointer++; continue;}   //if the node has children to explore then descend to explore them
@@ -215,6 +209,10 @@ while(stack_pointer!=-1)//this is the DFS stack pointer, stack contains nodes
                                              //since children get added on top of the stack, this is equivalent to descending down one branch
    if(v != r){//r is root vertex, there is no such thing as parent[r], so we skip this line if v is the root r.
       nDescendants[parent[v]]+=nDescendants[v];
+   }
+   if(dfs[v] > 2 && lexiCompare(ear[2*v], ear[2*v+1], ear[2*parent[v]], ear[2*parent[v]+1])){
+      ear[2*parent[v]] = ear[2*v];
+      ear[2*parent[v]+1] = ear[2*v+1];
    }
    stack_pointer--;  //when the vertex on top of the stack has been fully explored, decrement the stack pointer to backtrack during DFS 
 }//end while
@@ -276,14 +274,9 @@ bool isAncestor(int a, int b){
 //return true if back-edge (q <-- p) is smaller than (y <-- x)
 //return false if (y <-- x) is smaller than (q <-- p)
 bool lexiCompare(int p, int q, int x, int y){
-   if((dfs[q] < dfs[y]) 
+   return x == -1 || (dfs[q] < dfs[y]) 
    || ( (dfs[q] == dfs[y]) && (dfs[p] < dfs[x]) && !isAncestor(p, x) ) 
-   || ( (dfs[q] == dfs[y]) && isAncestor(x, p) ) 
-   ){
-      return true;
-   }else{
-      return false;
-   }
+   || ( (dfs[q] == dfs[y]) && isAncestor(x, p) );
 }
 
 bool isTree(int a, int b){

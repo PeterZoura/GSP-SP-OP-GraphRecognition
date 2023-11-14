@@ -54,21 +54,16 @@ bool isAncestor(int a, int b, graphDataHolder & gD){
 //return true if back-edge (q <-- p) is smaller than (y <-- x)
 //return false if (y <-- x) is smaller than (q <-- p)
 bool lexiCompare(int p, int q, int x, int y, graphDataHolder & gD){
-   if((gD.dfsRank[q] < gD.dfsRank[y]) 
-   || ( (gD.dfsRank[q] == gD.dfsRank[y]) && (gD.dfsRank[p] < gD.dfsRank[x]) && !isAncestor(p, x, gD) ) 
-   || ( (gD.dfsRank[q] == gD.dfsRank[y]) && isAncestor(x, p, gD) ) 
-   ){
-      return true;
-   }else{
-      return false;
+    return x == -1 || (gD.dfsRank[q] < gD.dfsRank[y]) 
+            || ( (gD.dfsRank[q] == gD.dfsRank[y]) && (gD.dfsRank[p] < gD.dfsRank[x]) && !isAncestor(p, x, gD) ) 
+            || ( (gD.dfsRank[q] == gD.dfsRank[y]) && isAncestor(x, p, gD) );
    }
-}
 
-void dfs(int starting_vertex, graphDataHolder & gD) {
+int genCS(int starting_vertex, graphDataHolder & gD) {
     s::stack<int> the_stack;
     the_stack.push(starting_vertex);
-    gD.dfsRank[starting_vertex] = 1;
-    int rank = 2;
+    int dfsNumber = 1;
+    gD.dfsRank[starting_vertex] = dfsNumber++;
 
     while (!the_stack.empty()) {
         int topOfStack = the_stack.top();
@@ -76,9 +71,8 @@ void dfs(int starting_vertex, graphDataHolder & gD) {
 
         for (int w : gD.adjList[topOfStack]) {
             if (gD.dfsRank[w] == -1) {
-                gD.dfsRank[w] = rank++;
+                gD.dfsRank[w] = dfsNumber++;
                 gD.parent[w] = topOfStack;
-
                 the_stack.push(w);
                 descend = true;
                 break;
@@ -86,23 +80,34 @@ void dfs(int starting_vertex, graphDataHolder & gD) {
                 //back edge detected
                 gD.ear[topOfStack].first = topOfStack;
                 gD.ear[topOfStack].second = w;
-            }else if(w != gD.parent[topOfStack] && isTree(w, topOfStack, gD)){
-                //back edge was not detected but child is finished processing, then assign ear of topOfStack.
-                if(gD.ear[topOfStack].first == -1 || lexiCompare(gD.ear[w].first, gD.ear[w].second, gD.ear[topOfStack].first, gD.ear[topOfStack].second, gD)){
-                    gD.ear[topOfStack].first = gD.ear[w].first;
-                    gD.ear[topOfStack].second = gD.ear[w].second;
-                }
             }
         }
         if (descend) {
             continue;
-        } else {
-            if(topOfStack != starting_vertex){
-                gD.nDescendants[gD.parent[topOfStack]] += gD.nDescendants[topOfStack];
-            }
-            the_stack.pop();
         }
+        
+        if(topOfStack != starting_vertex){
+            gD.nDescendants[gD.parent[topOfStack]] += gD.nDescendants[topOfStack];
+        }
+        /*
+        dfsRank[topOfStack] > 2; this is an easier way of writing
+        topOfStack != starting_vertex && parent[topOfStack] != starting_vertex
+        
+        both of those are necessary because:
+        1. if I only check topOfStack != starting_vertex, then when the vertex with the root r as parent is backed into as the search
+            is reversing up the tree, the if condition will succeed and gD.ear[gD.parent[topOfStack]] will run which produces an error
+            because the result is -1 and the function will use that parameter to find gD.dfsRank[-1] which doesn't exist.
+        2. if I only check parent[topOfStack] != starting_vertex, then when the root r is backed into as the search reverses up the tree
+            the if condition will succeed and gD.ear[gD.parent[topOfStack]] will run which produces an error because gD.ear[-1] doesn't
+            exist.
+        */
+        if(gD.dfsRank[topOfStack] > 2 && lexiCompare(gD.ear[topOfStack].first, gD.ear[topOfStack].second, gD.ear[gD.parent[topOfStack]].first, gD.ear[gD.parent[topOfStack]].second, gD)){
+                gD.ear[gD.parent[topOfStack]].first = gD.ear[topOfStack].first; 
+                gD.ear[gD.parent[topOfStack]].second = gD.ear[topOfStack].second;
+        }
+        the_stack.pop();
     }
+    return dfsNumber;
 }
 
 int main(int argc, char* argv[]) {
@@ -124,7 +129,7 @@ int main(int argc, char* argv[]) {
     create_adjacency_list(gD.n, edges, gD.adjList);
 
     auto time_start = s::chrono::steady_clock::now();
-    dfs(0, gD);
+    int d = genCS(0, gD);
     auto time_end = s::chrono::steady_clock::now();
     
     //Print adjacency list for debugging
@@ -140,10 +145,11 @@ int main(int argc, char* argv[]) {
 
 
     s::chrono::duration<double, s::nano> time_elapsed = s::chrono::duration_cast<s::chrono::nanoseconds>(time_end - time_start);
-    s::cout << "time elapsed is: " << s::setprecision(4) << time_elapsed.count()/1000 << "μs\n";
+    s::cout << d << " and time elapsed is: " << s::setprecision(4) << time_elapsed.count()/1000 << "μs\n";
+    
 
-    //Print DFS ranks for testing
-    //print tree list
+    // Print DFS ranks for testing
+    // print tree list
     // s::cout << '\n';
     // for (int i = 0; i < gD.dfsRank.size(); ++i) {
     //     s::cout << "Vertex " << i << " | DFS " << gD.dfsRank[i] << " | Parent " << gD.parent[i] << " | nDescendants " << gD.nDescendants[i] << " | ear " << gD.ear[i].first << ',' << gD.ear[i].second << "\n";
