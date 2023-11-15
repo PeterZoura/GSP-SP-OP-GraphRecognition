@@ -1,5 +1,4 @@
-//usage: ./dfs2 <input_graph> <# of runs>
-//It runs many times and gives average runtime
+//usage: ./dfs2 <input_graph>
 
 #include <atomic>
 #include <vector>
@@ -19,19 +18,19 @@ struct graphDataHolder{
     vector<int> parent; //vector containing data so that parent[3] gives the number of the vertex that is parent of 3 in the dfs tree
     vector<int> nDescendants; //vector containing number of descendants of a vertex including itself as a descendant.
     vector<int> dfsRank; //holds the number that represents in the order that the dfs accessed each vertex in the graph in.
-    vector<vector<int>> adjList; //adjList[0] contains the vector of Edges that are connected to vertex 0. Edge contains target vertex and tree edge boolean.
+    vector<int> adjList; //adjList[0] contains the vector of Edges that are connected to vertex 0. Edge contains target vertex and tree edge boolean.
+    vector<int> adjAddress;
     vector<pair<int, int>> ear; //holds ear decomposition data. pair.first must be source, pair.second must be sink
 };
 
 namespace s=std;
 
-void create_adjacency_list(vector<pair<int, int>> const &, vector<vector<int>> &);
+void create_adjacency_list(int const &, vector<pair<int, int>> const &, vector<int> &, vector<int> &);
 void create_edges(int const &, int const &, vector<pair<int, int>>&, s::ifstream&);
 bool isAncestor(int  const &, int  const &, graphDataHolder  const &);
 bool lexiCompare(int const &, int const &, int const &, int const &, graphDataHolder  const &);
 bool isTree(int const &, int const &, graphDataHolder const &);
 void genCS(int const &, graphDataHolder &);
-double main2(char *);
 
 
 int main(int argc, char* argv[]) {
@@ -42,15 +41,19 @@ int main(int argc, char* argv[]) {
     is >> gD.n >> gD.e;
     
     gD.dfsRank = s::vector<int>(gD.n, -1);
+    gD.dfsRank.shrink_to_fit();
     gD.parent = s::vector<int>(gD.n, -1);
+    gD.parent.shrink_to_fit();
     gD.nDescendants = s::vector<int>(gD.n, 1);
+    gD.nDescendants.shrink_to_fit();
     gD.ear = s::vector<pair<int, int>>(gD.n, s::pair<int, int>(-1, -1));
-    gD.adjList.resize(gD.n);
+    gD.ear.shrink_to_fit();
+    gD.adjList.reserve(gD.e * 2);
+    gD.adjAddress.reserve(gD.n+1);
     
     vector<pair<int, int>> edges;
     create_edges(gD.n, gD.e, edges, is);
-    create_adjacency_list(edges, gD.adjList);
-
+    create_adjacency_list(gD.n, edges, gD.adjList, gD.adjAddress);
     
     //measure the start time with a barrier that prevents the compiler from reordering
     std::atomic_thread_fence(std::memory_order_seq_cst);
@@ -69,11 +72,11 @@ int main(int argc, char* argv[]) {
     
 
     // Print adjacency list for debugging
-    // for(int i = 0; i<gD.adjList.size();i++){
+    // for(int i = 0; i<gD.n;i++){
     //     s::cout << "List " << i << " is: ";
-    //     for(int j : gD.adjList[i]){
-    //         char c = (isTree(j, i, gD)?'T':'B');
-    //         s::cout << c << j << " ";
+    //     for(int j = gD.adjAddress[i]; j<gD.adjAddress[i+1]; j++){
+    //         char c = (isTree(gD.adjList[j], i, gD)?'T':'B');
+    //         s::cout << c << gD.adjList[j] << " ";
     //     }
     //     s::cout << '\n';
     // }
@@ -99,8 +102,8 @@ void genCS(int const & starting_vertex, graphDataHolder & gD) {
     while (!the_stack.empty()) {
         int topOfStack = the_stack.back();
         bool descend = false;
-
-        for (int w : gD.adjList[topOfStack]) {
+        for (int i = gD.adjAddress[topOfStack]; i < gD.adjAddress[topOfStack+1]; i++) {
+            int w = gD.adjList[i];
             if (gD.dfsRank[w] == -1) {
                 gD.parent[w] = topOfStack;
                 gD.dfsRank[w] = dfsNumber++;
@@ -140,12 +143,22 @@ void genCS(int const & starting_vertex, graphDataHolder & gD) {
     }
 }
 
-void create_adjacency_list(vector<pair<int, int>> const & edges, vector<vector<int>>& adj) {
-    for (const auto& e : edges) {
-        int x = e.first;
-        int y = e.second;
-        adj[x].emplace_back(y);
-        adj[y].emplace_back(x);
+void create_adjacency_list(int const & n, vector<pair<int, int>> const & edges, vector<int>& adj, vector<int> & adjAdd) {
+    vector<int> temp(n+1, 0);
+    for(int i = 0; i<edges.size(); i++){
+        adjAdd[edges[i].first+1]++;
+        adjAdd[edges[i].second+1]++;
+    }
+    for(int i = 1; i<=n; i++){
+        adjAdd[i] += adjAdd[i-1];
+        temp[i] = adjAdd[i];
+    }
+    
+    for (int i = 0; i<edges.size(); i++) {
+        int x = edges[i].first;
+        int y = edges[i].second;
+        adj[temp[x]++] = y;
+        adj[temp[y]++] = x;
     }
 }
 

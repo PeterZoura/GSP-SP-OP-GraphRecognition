@@ -74,7 +74,6 @@ bool isAncestor(int, int);
 bool lexiCompare(int p, int q, int x, int y); //true if back-edge p-q is smaller than x-y 
 bool isTree(int, int);
 void DFS(int);
-double main2(char *);
 
 int Nr=1;
 
@@ -120,7 +119,7 @@ int main(int n_args, char** args)
    std::atomic_thread_fence(std::memory_order_seq_cst);
    
    std::chrono::duration<double, std::nano> elapsed = std::chrono::duration_cast<std::chrono::nanoseconds>(time_end - time_start);
-   std::cout << std::setprecision(4) << elapsed.count()/1000 << "μs is the average time\n";
+   std::cout << std::setprecision(4) << elapsed.count()/1000 << "μs is the time\n";
 
    // for(int i = 0; i<n; i++){
    // printf("i: %d | dfs: %d | nd: %d | ear: %d,%d\n", i, dfs[i], nDescendants[i], ear[2*i], ear[2*i+1]);
@@ -211,7 +210,7 @@ while(stack_pointer!=-1)//this is the DFS stack pointer, stack contains nodes
 
 void create_adjacency_list()
 {
-   adj = (int*)malloc(sizeof(int)*4*m);				//array of 4 ints per edges	each block represents 1 edge	0000'0000'0000'0000'0000 for m blocks
+   adj = (int*)malloc(sizeof(int)*2*m);				//array of 4 ints per edges	each block represents 1 edge	0000'0000'0000'0000'0000 for m blocks
    adjAddress = (int*)malloc(sizeof(int)*(n+1));		//array of ints. size = |V| + 1		0'0'0'0'0'0'0'0'0'0'0'0'0'0		why is there 1 extra int? and what does it represent?
    for(int i=0;i<=n;i++){adjAddress[i]=0;}			//initialize adjAddress to zeroes
    for(int i=0;i<m;i++){						//for every edge
@@ -227,8 +226,6 @@ void create_adjacency_list()
 		adjAddress[i]+=adjAddress[i-1]; //increase each vertex's degree by x where x is the previous vertex's degree, but the first one is increased by 0
 		nextOut[i]=adjAddress[i];		//copy adjAddress into nextOut, this is because nextOut will be changed later, but adjAddress will preserve the adj list offsets
    } //this is to set the offset in adj for each vertex's adjacency list.
-   
-   
    /*
    each vertex v has degree i, this represents "how many vertices v is adjacent to"
    so the degree also represents how many spaces v's adjacency list needs.
@@ -237,20 +234,15 @@ void create_adjacency_list()
    this is because adjAddress[v] represents the offset of v's adjacency list in the greater array adj which stores the adjacency lists
    so adjAddress[v] represents the number of vertices v is adjacent to plus the number of vertices all previous vertices are adjacent to.
    adj[adjAddress[v]] gives us the index in adj to access the beginning of the adjacency list of v.
-   */
-   
+   */   
    for(int i=0;i<m;i++)
    {		//edges array has 2 ints per edge, each block represents 1 edge		00'00'00'00'00'00... for m blocks
 			//clearly these 2 ints represent the number of the source vertex and the number of the target vertex of each edge
       int x=edges[2*i]; 	//read an edge into the variables x and y
 	   int y=edges[2*i+1];	//(x, y) is the edge we are referencing
       adj[nextOut[x]++]=y;	//access the adjacency list offset for vertex x and set the first adjacent vertex to y
-		            	      //then increment the adjacency list offset so that the next vertex that's added in the list
-						   	   //gets added at the end of the list, rather than at the beginning.
-      adj[nextOut[y]++]=x;	//repeat for the adjacency list of vertex y
-		                     //this incrementing of the offsets in nextOut is the reason that we copied the list adjAddress rather than modifying adjAddress
-							      //because adjAddress is needed to be used to access the beginnings of the adjacency lists of each vertex later in the program.
-   }
+		adj[nextOut[y]++]=x;	//repeat for the adjacency list of vertex y
+	}
 }
 
 //is a the ancestor of b?
