@@ -1,5 +1,4 @@
-//usage: ./dfs <input_graph> <# of runs>
-//It runs many times and gives average runtime
+//usage: ./dfs <input_graph>
 
 /*
 terminology guide
@@ -82,17 +81,7 @@ int Nr=1;
 
 int main(int n_args, char** args)
 {
-   int times = atoi(args[2]);
-   double ave = 0.0;
-   for(int i = 0; i<times; i++){
-      ave += main2(args[1]);
-   }
-   std::cout << "Average of "<< times << " runs: " << ave/(0.0 + times) << "μs\n";
-   return 0;
-}
-
-double main2(char * fileInputName){
-   FILE* fp = fopen(fileInputName,"r");
+   FILE* fp = fopen(args[1],"r");
    if(fscanf(fp,"%d %d",&n,&m)){
       dfs = (int*)malloc(sizeof(int)*n); 
       for(int i=0;i<n;i++){ dfs[i]=-1; }
@@ -131,7 +120,7 @@ double main2(char * fileInputName){
    std::atomic_thread_fence(std::memory_order_seq_cst);
    
    std::chrono::duration<double, std::nano> elapsed = std::chrono::duration_cast<std::chrono::nanoseconds>(time_end - time_start);
-   //std::cout << std::setprecision(4) << elapsed.count()/1000 << "μs is the average time\n";
+   std::cout << std::setprecision(4) << elapsed.count()/1000 << "μs is the average time\n";
 
    // for(int i = 0; i<n; i++){
    // printf("i: %d | dfs: %d | nd: %d | ear: %d,%d\n", i, dfs[i], nDescendants[i], ear[2*i], ear[2*i+1]);
@@ -267,7 +256,7 @@ void create_adjacency_list()
 //is a the ancestor of b?
 //return true if yes.
 bool isAncestor(int a, int b){
-   return (dfs[a] < dfs[b] && dfs[b] < ( dfs[a] + nDescendants[a] ) );
+   return (dfs[a] <= dfs[b] && dfs[b] < ( dfs[a] + nDescendants[a] ) );
 }
 
 //return true if back-edge (q <-- p) is smaller than (y <-- x)

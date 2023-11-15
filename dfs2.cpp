@@ -25,28 +25,20 @@ struct graphDataHolder{
 
 namespace s=std;
 
-void create_adjacency_list(int const &, vector<pair<int, int>> const &, vector<vector<int>> &);
+void create_adjacency_list(vector<pair<int, int>> const &, vector<vector<int>> &);
 void create_edges(int const &, int const &, vector<pair<int, int>>&, s::ifstream&);
 bool isAncestor(int  const &, int  const &, graphDataHolder  const &);
 bool lexiCompare(int const &, int const &, int const &, int const &, graphDataHolder  const &);
 bool isTree(int const &, int const &, graphDataHolder const &);
 void genCS(int const &, graphDataHolder &);
 double main2(char *);
-int main(int argc, char* argv[]) {
-    s::ios::sync_with_stdio(false); //I heard this helps optimize
-    int times = atoi(argv[2]);
-    double ave = 0.0;
-    for(int i = 0; i<times; i++){
-        ave += main2(argv[1]);
-    }
-    s::cout << "average of " << times << " runs: " << ave/(0.0 + times) << "μs\n";
-    return 0;
-}
 
-double main2(char * inputFileName){
+
+int main(int argc, char* argv[]) {
+    s::ios::sync_with_stdio(false);     
     graphDataHolder gD; //gD stands for Graph Data
     
-    s::ifstream is(inputFileName);
+    s::ifstream is(argv[1]);
     is >> gD.n >> gD.e;
     
     gD.dfsRank = s::vector<int>(gD.n, -1);
@@ -57,7 +49,7 @@ double main2(char * inputFileName){
     
     vector<pair<int, int>> edges;
     create_edges(gD.n, gD.e, edges, is);
-    create_adjacency_list(gD.n, edges, gD.adjList);
+    create_adjacency_list(edges, gD.adjList);
 
     
     //measure the start time with a barrier that prevents the compiler from reordering
@@ -73,7 +65,7 @@ double main2(char * inputFileName){
     std::atomic_thread_fence(std::memory_order_seq_cst);
     
     s::chrono::duration<double, s::nano> time_elapsed = s::chrono::duration_cast<s::chrono::nanoseconds>(time_end - time_start);
-    //s::cout << "time elapsed is: " << s::setprecision(4) << time_elapsed.count()/1000 << "μs\n";
+    s::cout << "time elapsed is: " << s::setprecision(4) << time_elapsed.count()/1000 << "μs\n";
     
 
     // Print adjacency list for debugging
@@ -93,7 +85,7 @@ double main2(char * inputFileName){
     //     s::cout << "Vertex " << i << " | DFS " << gD.dfsRank[i] << " | Parent " << gD.parent[i] << " | nDescendants " << gD.nDescendants[i] << " | ear " << gD.ear[i].first << ',' << gD.ear[i].second << "\n";
     // }
 
-    return time_elapsed.count()/1000;
+    return 0;
 }
 
 void genCS(int const & starting_vertex, graphDataHolder & gD) {
@@ -148,8 +140,7 @@ void genCS(int const & starting_vertex, graphDataHolder & gD) {
     }
 }
 
-void create_adjacency_list(int const & n, vector<pair<int, int>> const & edges, vector<vector<int>>& adj) {
-    adj.resize(n);
+void create_adjacency_list(vector<pair<int, int>> const & edges, vector<vector<int>>& adj) {
     for (const auto& e : edges) {
         int x = e.first;
         int y = e.second;
