@@ -1,6 +1,7 @@
 //usage: ./dfs2 <input_graph> <# of runs>
 //It runs many times and gives average runtime
 
+#include <atomic>
 #include <vector>
 #include <iostream>
 #include <fstream>
@@ -58,14 +59,24 @@ double main2(char * inputFileName){
     create_edges(gD.n, gD.e, edges, is);
     create_adjacency_list(gD.n, edges, gD.adjList);
 
+    
+    //measure the start time with a barrier that prevents the compiler from reordering
+    std::atomic_thread_fence(std::memory_order_seq_cst);
     auto time_start = s::chrono::steady_clock::now();
+    std::atomic_thread_fence(std::memory_order_seq_cst);
+ 
     genCS(0, gD);
+    
+    //measure the end time with a barrier that prevents the compiler from reordering
+    std::atomic_thread_fence(std::memory_order_seq_cst);
     auto time_end = s::chrono::steady_clock::now();
+    std::atomic_thread_fence(std::memory_order_seq_cst);
+    
     s::chrono::duration<double, s::nano> time_elapsed = s::chrono::duration_cast<s::chrono::nanoseconds>(time_end - time_start);
     //s::cout << "time elapsed is: " << s::setprecision(4) << time_elapsed.count()/1000 << "μs\n";
     
 
-    //Print adjacency list for debugging
+    // Print adjacency list for debugging
     // for(int i = 0; i<gD.adjList.size();i++){
     //     s::cout << "List " << i << " is: ";
     //     for(int j : gD.adjList[i]){
@@ -86,20 +97,22 @@ double main2(char * inputFileName){
 }
 
 void genCS(int const & starting_vertex, graphDataHolder & gD) {
-    s::stack<int> the_stack;
-    the_stack.push(starting_vertex);
+    //s::stack<int, std::vector<int>> the_stack;
+    std::vector<int> the_stack;
+    the_stack.reserve(gD.n);
+    the_stack.push_back(starting_vertex);
     int dfsNumber = 1;
     gD.dfsRank[starting_vertex] = dfsNumber++;
 
     while (!the_stack.empty()) {
-        int topOfStack = the_stack.top();
+        int topOfStack = the_stack.back();
         bool descend = false;
 
         for (int w : gD.adjList[topOfStack]) {
             if (gD.dfsRank[w] == -1) {
                 gD.parent[w] = topOfStack;
                 gD.dfsRank[w] = dfsNumber++;
-                the_stack.push(w);
+                the_stack.push_back(w);
                 descend = true;
                 break;
             }else if(gD.dfsRank[w] < gD.dfsRank[topOfStack] && w != gD.parent[topOfStack]){
@@ -131,7 +144,7 @@ void genCS(int const & starting_vertex, graphDataHolder & gD) {
                 gD.ear[gD.parent[topOfStack]].first = gD.ear[topOfStack].first; 
                 gD.ear[gD.parent[topOfStack]].second = gD.ear[topOfStack].second;
         }
-        the_stack.pop();
+        the_stack.pop_back();
     }
 }
 

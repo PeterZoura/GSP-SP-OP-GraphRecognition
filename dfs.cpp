@@ -51,6 +51,7 @@ for example:
 
 */
 
+#include <atomic>
 #include <vector>
 #include <iostream>
 #include <iomanip>
@@ -117,9 +118,18 @@ double main2(char * fileInputName){
 
    create_adjacency_list();
 
+   //measure the start time with a barrier that prevents the compiler from reordering
+   std::atomic_thread_fence(std::memory_order_seq_cst);
    auto time_start = std::chrono::steady_clock::now();
+   std::atomic_thread_fence(std::memory_order_seq_cst);
+   
    DFS(0);
+   
+   //measure the end time with a barrier that prevents the compiler from reordering
+   std::atomic_thread_fence(std::memory_order_seq_cst);
    auto time_end = std::chrono::steady_clock::now();
+   std::atomic_thread_fence(std::memory_order_seq_cst);
+   
    std::chrono::duration<double, std::nano> elapsed = std::chrono::duration_cast<std::chrono::nanoseconds>(time_end - time_start);
    //std::cout << std::setprecision(4) << elapsed.count()/1000 << "μs is the average time\n";
 
@@ -155,6 +165,7 @@ double main2(char * fileInputName){
    
    return elapsed.count()/1000;
 }
+
 void DFS(int r)
 {
    int v = r;
