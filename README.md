@@ -22,4 +22,4 @@ g++ df2.cpp -o dfs2 -O3 -std=c++20
 run:\
 ./dfs2 32V.txt  //no output file is coded to be produced yet.
 
-C style is slightly more consistent in having fast speeds, but both are almost equally fast.\
+C style is slightly more consistent in having fast speeds, but both are almost equally fast.
