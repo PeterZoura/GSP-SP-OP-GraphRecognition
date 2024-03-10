@@ -1,3 +1,5 @@
+NOTE: I made a mistake. The vector "ear" in graphDataHolder has n = |V| pairs<int, int>. Instead we need to record e = |E| pairs<int, int> but it should be stored in the adjacency list. 
+
 GraphProject4990_2023F
 graph generator can be used to generate file for graph of any size.\
 g++ GraphGenerator.cpp -o ggen -O3\
