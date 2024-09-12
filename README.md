@@ -1,5 +1,6 @@
 GraphProject4990_2023F\
 This project's goal was to implement an aglorithm described by Dr. Yung Tsin and his co-authors which is described in this paper: [click here to go to sciencedirect.com](https://www.sciencedirect.com/science/article/abs/pii/S0166218X22003900) \
+The algorithm is written recursively, but Dr. Tsin instructed me to implement it iteratively.\
 During my two semesters in this course, I got as far as implementing a depth first search algorithm that runs iteratively rather than recursively.\
 This algorithm also performs ear decomposition.\
 
